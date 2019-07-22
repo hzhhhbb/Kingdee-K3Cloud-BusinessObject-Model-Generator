@@ -1,0 +1,5 @@
+﻿1、Kingdee.BOS.Core.Metadata.ElementMetadata ElementType 各类元素类型的说明
+2、类属性类型命名规则
+   普通属性(ISimpleProperty)：基本类型名称
+   复杂属性（基础资料、辅助资料）(IComplexProperty)：FormId+LookUpObject.FormId
+   列表属性(ICollectionProperty)：List<EntryName>
