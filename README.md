@@ -11,6 +11,7 @@
 # 能做什么？
 可以帮助开发人员节省定义业务对象实体类的时间（如果定义的话）<br/>
 开发人员可以自由修改此项目源代码以满足项目需要，如自定义命名空间、类名或者生成规则等<br/>
+作为ORM的一部分，编写Linq to K3Cloud<br/>
 # 如何使用？
 1. 把项目中使用到的Kingdee.BOS、Kingdee.BOS.Core、Kingdee.BOS.DataEntity、Kingdee.BOS.ServiceFacade.KDServiceClient、Kingdee.BOS.ServiceFacade.KDServiceClientFx这5个程序集的引用指向于K3Cloud的安装目录WebSite\bin文件夹下对应的程序集文件
 2. 修改项目中App.config文件中的配置
