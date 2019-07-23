@@ -3,6 +3,7 @@
 namespace Kingdee.Vincent.Generator
 {
     using System;
+    using System.Configuration;
     using System.Threading;
 
     using Kingdee.BOS.Authentication;
@@ -14,38 +15,54 @@ namespace Kingdee.Vincent.Generator
     {
         private static void Main(string[] args)
         {
-            const string HostUrl = "http://localhost/k3cloud/";
+            var appSettings = ConfigurationManager.AppSettings;
+            string hostUrl = appSettings["hostUrl"];
+            string userName = appSettings["userName"];
+            string password = appSettings["password"];
+            string acctId = appSettings["dataCenterId"];
 
             UserServiceProxy proxy = new UserServiceProxy();
             LoginInfo loginInfo = new LoginInfo
                                       {
-                                          Username = "administrator",
-                                          Password = "888888",
+                                          Username = userName,
+                                          Password = password,
                                           Lcid = 2052,
-                                          AcctID = "5d148e1449825f",
+                                          AcctID = acctId,
                                           LoginType = LoginType.NormalERPLogin
                                       };
 
-            proxy.HostURL = HostUrl;
+            proxy.HostURL = hostUrl;
             proxy.ValidateUser(
-                HostUrl,
+                hostUrl,
                 loginInfo,
                 result =>
                     {
                         Console.WriteLine(result.IsSuccessByAPI ? "登录成功" : throw new Exception("登录失败" + result.Message));
                     });
-            Thread.Sleep(1500);
-            MetadataServiceProxy metadataService = new MetadataServiceProxy
-                                                       {
-                                                           HostURL = HostUrl
-                                                       };
-            string objectId = "BD_MATERIAL";
+            Thread.Sleep(2000);
+
+            MetadataServiceProxy metadataService = new MetadataServiceProxy { HostURL = hostUrl };
+            string objectId;
+            bool isExist;
+            do
+            {
+                Console.WriteLine("输入业务对象标识并回车");
+
+                objectId = Console.ReadLine();
+
+                isExist = metadataService.IsExistMetaObjectType(objectId);
+                if (!isExist)
+                {
+                    Console.WriteLine($"标识为{objectId}的业务对象不存在，请重新输入");
+                }
+            }
+            while (!isExist);
+
             FormMetadata formMetadata = metadataService.GetFormMetadata(objectId);
-
-            string outputPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "BD" + Path.DirectorySeparatorChar);
-
+            string outputPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, formMetadata.SubSystemId + Path.DirectorySeparatorChar);
+            Console.WriteLine($"开始生成业务对象{formMetadata.Name}的实体类");
             ClassFileGenerator.GenerateClassFiles(formMetadata, outputPath);
-            Console.WriteLine("生成结束");
+            Console.WriteLine($"生成结束，文件路径：{outputPath}");
             Console.ReadKey();
         }
     }
