@@ -26,7 +26,7 @@
             List<ClassDefinition> classDefinitions = new List<ClassDefinition>();
             foreach (Entity entity in entities)
             {
-                classDefinitions.AddRange(BuildClassDefinitions(entity, ns, formId));
+                classDefinitions.AddRange(BuildClassDefinitions(formMetadata.BusinessInfo,entity, ns, formId));
             }
 
             classDefinitions = FilterClassDefinition(classDefinitions);
@@ -47,7 +47,7 @@
             return filteredClassDefinitions;
         }
 
-        private static List<ClassDefinition> BuildClassDefinitions(Entity entity, string ns, string formId)
+        private static List<ClassDefinition> BuildClassDefinitions(BusinessInfo businessInfo,Entity entity, string ns, string formId)
         {
             List<ClassDefinition> results = new List<ClassDefinition>();
 
@@ -59,7 +59,7 @@
             foreach (DynamicProperty property in entity.DynamicObjectType.Properties)
             {
                 Field field = fields.FirstOrDefault(u => u.PropertyName.Equals(property.Name));
-                string usingNamespace = GetNamespaceName(property, field);
+                string usingNamespace = GetNamespaceName(property);
                 if (!string.IsNullOrWhiteSpace(usingNamespace))
                 {
                     usingNamespaces.Add(usingNamespace);
@@ -87,10 +87,27 @@
                                                    {
                                                        Name = name, Annotation = annotation, TypeName = type
                                                    };
+                //给字段加上数据表列的特性
                 if (field != null)
                 {
                     singlePropertyDefinition.Attributes.Add($"[Column(\"{field.FieldName}\")]");
                 }
+                else
+                {
+                    if (property == entity.DynamicObjectType.PrimaryKey)
+                    {
+                        singlePropertyDefinition.Attributes.Add($"[Column(\"{entity.EntryPkFieldName}\")]");
+                    }
+                    else if(property == businessInfo.GetForm().MasterIdDynamicProperty)
+                    {
+                        singlePropertyDefinition.Attributes.Add($"[Column(\"{businessInfo.GetForm().MasterPKFieldName}\")]");
+                    }
+                    else if(entity.SeqDynamicProperty == property)
+                    {
+                        singlePropertyDefinition.Attributes.Add($"[Column(\"{entity.SeqFieldKey}\")]");
+                    }
+                }
+
 
                 classProperties.Add(singlePropertyDefinition);
             }
@@ -328,8 +345,7 @@
                 case 34:
                     className = formId;
                     break;
-                case 38:
-                case 35:
+               default:
                     className = entity.EntryName;
                     break;
             }
@@ -337,7 +353,7 @@
             return className;
         }
 
-        private static string GetNamespaceName(DynamicProperty property, Field field)
+        private static string GetNamespaceName(DynamicProperty property)
         {
             string ns = string.Empty;
 
