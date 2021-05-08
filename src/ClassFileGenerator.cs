@@ -1,4 +1,8 @@
-﻿namespace Kingdee.Vincent.Generator
+﻿using System.Globalization;
+using Kingdee.BOS.Core.CommonFilter.ConditionVariableAnalysis;
+using Kingdee.BOS.Core.Metadata.FormElement;
+
+namespace Kingdee.Vincent.Generator
 {
     using System;
     using System.Collections.Generic;
@@ -59,6 +63,10 @@
             foreach (DynamicProperty property in entity.DynamicObjectType.Properties)
             {
                 Field field = fields.FirstOrDefault(u => u.PropertyName.Equals(property.Name));
+                if (property.Name.EndsWith("_Id", true, CultureInfo.CurrentCulture))
+                {
+                    continue;
+                }
                 string usingNamespace = GetNamespaceName(property);
                 if (!string.IsNullOrWhiteSpace(usingNamespace))
                 {
@@ -75,13 +83,13 @@
                 string name = property.Name;
 
                 // 基础资料类型属性、单选辅助资料属性
-                if (property is IComplexProperty complexProperty)
-                {
-                   string lookUpObjectId = GetFieldLookUpObjectId(field);
-
-                   type = lookUpObjectId;
-                   results.Add(BuildClassDefinition(complexProperty, ns, lookUpObjectId));
-                }
+                // if (property is IComplexProperty complexProperty)
+                // {
+                //    string lookUpObjectId = GetFieldLookUpObjectId(field);
+                //
+                //    type = lookUpObjectId;
+                //    results.Add(BuildClassDefinition(complexProperty, ns, lookUpObjectId));
+                // }
 
                 var singlePropertyDefinition = new ClassPropertyDefinition()
                                                    {
@@ -115,6 +123,7 @@
             string className = GetClassName(entity, formId);
             var classDefinition = definition.SetAnnotation(entity.Name).SetName(className).SetNamespace(ns)
                 .SetProperties(classProperties).SetUsingNamespaces(usingNamespaces);
+            classDefinition.AddAttribute($"[BusinessObject(\"{businessInfo.GetForm().Id}\")]");
             if (!string.IsNullOrWhiteSpace(entity.TableName))
             {
                 classDefinition.AddAttribute($"[Table(\"{entity.TableName}\")]");
@@ -139,6 +148,22 @@
             }
 
             return lookUpObjectId;
+        }
+
+        private static string GetBusinessObjectPkTypeName(Field field)
+        {
+            EnumPkFieldType pkFieldType = EnumPkFieldType.INT;
+            switch (field)
+            {
+                case ILookUpField lookUpField:
+                    pkFieldType = lookUpField.LookUpObject.PkFieldType;
+                    break;
+                case IRelatedFlexGroupField flexGroupField:
+                    pkFieldType = flexGroupField.RelateFlexBusinessInfo.GetForm().PkFieldType;
+                    break;
+            }
+
+            return pkFieldType.ToString().ToLower();
         }
 
         private static ClassDefinition BuildClassDefinition(IComplexProperty property, string ns, string className)
@@ -178,8 +203,7 @@
                 // 基础资料类型属性、单选辅助资料属性
                 case IComplexProperty _:
                 {
-                    string lookUpObjectId = GetFieldLookUpObjectId(field);
-                    typeName = lookUpObjectId;
+                    typeName = GetBaseTypeName(property.ReflectedType.PrimaryKey.PropertyType);
                     break;
                 }
 
@@ -293,7 +317,7 @@
                 {
                     return "DateTime?";
                 }
-            }
+            } 
 
             return type.Name;
         }
